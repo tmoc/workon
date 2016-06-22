@@ -144,6 +144,84 @@ func main() {
 				return nil
 			},
 		},
+		{
+			Name:  "editor",
+			Usage: "Set editor to open project with.",
+			Action: func(c *cli.Context) error {
+				args := c.Args()
+				if len(args) != 1 {
+					fmt.Println("Must provide editor name.")
+					return nil
+				}
+				editor := args[0]
+
+				usr, err := user.Current()
+				if err != nil {
+					log.Fatal(err)
+				}
+				file, err := ioutil.ReadFile(usr.HomeDir + "/" + configFilename)
+				if err != nil {
+					log.Fatal(err)
+				}
+				var cfg Config
+				if err := json.Unmarshal(file, &cfg); err != nil {
+					log.Fatal(err)
+				}
+
+				cfg.EditorApp = editor
+
+				cfgJson, err := json.Marshal(cfg)
+				if err != nil {
+					log.Fatal(err)
+				}
+				err = ioutil.WriteFile(usr.HomeDir+"/"+configFilename, cfgJson, 0644)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				fmt.Println("Set editor to", editor)
+				return nil
+			},
+		},
+		{
+			Name:  "terminal",
+			Usage: "Set terminal to open project with.",
+			Action: func(c *cli.Context) error {
+				args := c.Args()
+				if len(args) != 1 {
+					fmt.Println("Must provide terminal name.")
+					return nil
+				}
+				terminal := args[0]
+
+				usr, err := user.Current()
+				if err != nil {
+					log.Fatal(err)
+				}
+				file, err := ioutil.ReadFile(usr.HomeDir + "/" + configFilename)
+				if err != nil {
+					log.Fatal(err)
+				}
+				var cfg Config
+				if err := json.Unmarshal(file, &cfg); err != nil {
+					log.Fatal(err)
+				}
+
+				cfg.TerminalApp = terminal
+
+				cfgJson, err := json.Marshal(cfg)
+				if err != nil {
+					log.Fatal(err)
+				}
+				err = ioutil.WriteFile(usr.HomeDir+"/"+configFilename, cfgJson, 0644)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				fmt.Println("Set terminal to", terminal)
+				return nil
+			},
+		},
 	}
 	app.Action = func(c *cli.Context) error {
 		usr, err := user.Current()
