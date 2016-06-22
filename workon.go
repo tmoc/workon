@@ -23,7 +23,7 @@ type Config struct {
 	Projects    []Project `json:"projects"`
 }
 
-var configFilename = ".workonconfig.json"
+var configFilename = ".workon"
 
 func main() {
 	app := cli.NewApp()
@@ -31,45 +31,67 @@ func main() {
 	app.Usage = "Quickly open projects in editor and terminal."
 	app.Commands = []cli.Command{
 		{
-			Name:  "add",
-			Usage: "Add project abbreviation and location.",
+			Name:  "setup",
+			Usage: "Create new workon configuration file.",
 			Action: func(c *cli.Context) error {
-				if len(c.Args()) != 2 {
-					fmt.Println("Must provide both project abbreviation and filepath.")
-					return nil
-				}
-				newProject := Project{c.Args()[0], c.Args()[1]}
-				var cfg Config
 				usr, err := user.Current()
 				if err != nil {
 					log.Fatal(err)
 				}
-				fi, err := ioutil.ReadFile(usr.HomeDir + "/" + configFilename)
+				newCfg, err := json.Marshal(Config{"atom", "terminal", nil})
 				if err != nil {
 					log.Fatal(err)
 				}
-				if err := json.Unmarshal(fi, &cfg); err != nil {
+				err = ioutil.WriteFile(usr.HomeDir+"/"+configFilename, newCfg, 0644)
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Println("Created new configuration file in", usr.HomeDir)
+				return nil
+			},
+		},
+		{
+			Name:  "add",
+			Usage: "Add project abbreviation and location.",
+			Action: func(c *cli.Context) error {
+				args := c.Args()
+				if len(args) != 2 {
+					fmt.Println("Must provide both project abbreviation and filepath.")
+					return nil
+				}
+				abbreviation, filepath := args[0], args[1]
+
+				usr, err := user.Current()
+				if err != nil {
+					log.Fatal(err)
+				}
+				file, err := ioutil.ReadFile(usr.HomeDir + "/" + configFilename)
+				if err != nil {
+					log.Fatal(err)
+				}
+				var cfg Config
+				if err := json.Unmarshal(file, &cfg); err != nil {
 					log.Fatal(err)
 				}
 
 				for _, v := range cfg.Projects {
-					if v.Abbreviation == newProject.Abbreviation {
-						fmt.Print("Project \"", newProject.Abbreviation, "\" already exists.\n")
+					if v.Abbreviation == abbreviation {
+						fmt.Print("Project \"", abbreviation, "\" already exists.\n")
 						return nil
 					}
 				}
-				cfg.Projects = append(cfg.Projects, newProject)
+				cfg.Projects = append(cfg.Projects, Project{abbreviation, filepath})
 
-				data, err := json.Marshal(cfg)
+				cfgJson, err := json.Marshal(cfg)
 				if err != nil {
 					log.Fatal(err)
 				}
-				err = ioutil.WriteFile(usr.HomeDir+"/"+configFilename, data, 0644)
+				err = ioutil.WriteFile(usr.HomeDir+"/"+configFilename, cfgJson, 0644)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				fmt.Print("Added \"", c.Args()[0], "\" located at: ", c.Args()[1], "\n")
+				fmt.Print("Added \"", abbreviation, "\" located at: ", filepath, "\n")
 				return nil
 			},
 		},
@@ -77,12 +99,13 @@ func main() {
 			Name:  "remove",
 			Usage: "Remove project from config.",
 			Action: func(c *cli.Context) error {
-				if len(c.Args()) != 1 {
+				args := c.Args()
+				if len(args) != 1 {
 					fmt.Println("Must provide project abbreviation.")
 					return nil
 				}
-				abbreviation := c.Args()[0]
-				var cfg Config
+				abbreviation := args[0]
+
 				usr, err := user.Current()
 				if err != nil {
 					log.Fatal(err)
@@ -91,6 +114,7 @@ func main() {
 				if err != nil {
 					log.Fatal(err)
 				}
+				var cfg Config
 				if err := json.Unmarshal(fi, &cfg); err != nil {
 					log.Fatal(err)
 				}
@@ -108,16 +132,15 @@ func main() {
 					return nil
 				}
 
-				data, err := json.Marshal(cfg)
+				cfgJson, err := json.Marshal(cfg)
 				if err != nil {
 					log.Fatal(err)
 				}
-				err = ioutil.WriteFile(usr.HomeDir+"/"+configFilename, data, 0644)
+				err = ioutil.WriteFile(usr.HomeDir+"/"+configFilename, cfgJson, 0644)
 				if err != nil {
 					log.Fatal(err)
 				}
-
-				fmt.Print("Removed project \"", c.Args().First(), "\".\n")
+				fmt.Print("Removed project \"", abbreviation, "\".\n")
 				return nil
 			},
 		},
